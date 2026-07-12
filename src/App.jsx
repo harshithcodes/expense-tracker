@@ -22,7 +22,7 @@ const CATEGORIES = [
 
 const getCat = (label) => CATEGORIES.find(c => c.label === label) || CATEGORIES[6]
 
-const fmt = (n) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(n)
+const fmt = (n) => new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(n)
 const fmtDate = (d) => new Date(d + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
 
 // ─── Stat Card ───────────────────────────────────────────────────────────────
@@ -104,7 +104,7 @@ function ExpenseModal({ onClose, onSave, editing }) {
         )}
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-          <Field label="Amount ($)">
+          <Field label="Amount (₹)">
             <input
               type="number" min="0" step="0.01" placeholder="0.00"
               value={form.amount} onChange={e => update('amount', e.target.value)}
