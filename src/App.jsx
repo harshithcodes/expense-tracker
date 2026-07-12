@@ -266,30 +266,34 @@ export default function App() {
   const filtered = filterCat === 'All' ? expenses : expenses.filter(e => e.category === filterCat)
 
   return (
-    <div style={{ maxWidth: 1100, margin: '0 auto', padding: '24px 16px', minHeight: '100vh' }}>
+    <div style={{ maxWidth: 1100, margin: '0 auto', padding: '20px 16px', minHeight: '100vh' }}>
       {/* Header */}
-      <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 32 }}>
-        <div>
-          <h1 style={{ fontSize: 26, fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, background: 'linear-gradient(135deg, #818cf8, #6366f1)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-            ExpenseFlow
-          </h1>
-          <p style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 2 }}>Track every dollar, effortlessly</p>
+      <header style={{ marginBottom: 24 }}>
+        {/* Top row: title + Add button */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+          <div>
+            <h1 style={{ fontSize: 22, fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, background: 'linear-gradient(135deg, #818cf8, #6366f1)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+              ExpenseFlow
+            </h1>
+            <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>Track every dollar, effortlessly</p>
+          </div>
+          <button onClick={() => setModal('add')} style={{ background: 'var(--accent)', border: 'none', borderRadius: 10, color: '#fff', fontSize: 14, fontWeight: 600, padding: '10px 18px', display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+            <Plus size={16} /> Add Expense
+          </button>
         </div>
+        {/* Bottom row: nav tabs full width */}
         <div style={{ display: 'flex', gap: 8 }}>
           <button
             onClick={() => setView('dashboard')}
-            style={{ ...navBtn, ...(view === 'dashboard' ? navBtnActive : {}) }}
+            style={{ ...navBtn, ...(view === 'dashboard' ? navBtnActive : {}), flex: 1, justifyContent: 'center' }}
           >
             <LayoutDashboard size={15} /> Dashboard
           </button>
           <button
             onClick={() => setView('list')}
-            style={{ ...navBtn, ...(view === 'list' ? navBtnActive : {}) }}
+            style={{ ...navBtn, ...(view === 'list' ? navBtnActive : {}), flex: 1, justifyContent: 'center' }}
           >
             <List size={15} /> Expenses
-          </button>
-          <button onClick={() => setModal('add')} style={primaryBtn}>
-            <Plus size={16} /> Add
           </button>
         </div>
       </header>
@@ -351,7 +355,7 @@ function Dashboard({ expenses, total, thisMonth, byCat, monthlyData, onAdd }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20, animation: 'fadeIn 0.3s ease' }}>
       {/* Stat cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 14 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 12 }}>
         <StatCard label="Total Spent" value={fmt(total)} sub={`${expenses.length} transactions`} icon={DollarSign} color="#6366f1" />
         <StatCard label="This Month" value={fmt(thisMonth)} sub="Current month" icon={TrendingUp} color="#34d399" />
         <StatCard label="Avg per Expense" value={fmt(avg)} sub="All time" icon={TrendingDown} color="#fbbf24" />
@@ -446,13 +450,6 @@ function ExpenseList({ expenses, allExpenses, filterCat, setFilterCat, onEdit, o
       </div>
 
       <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 16, overflow: 'hidden' }}>
-        {/* Table header */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 120px 140px 100px 80px', gap: 12, padding: '12px 20px', borderBottom: '1px solid var(--border)', background: 'var(--bg-input)' }}>
-          {['Description', 'Category', 'Date', 'Amount', ''].map((h, i) => (
-            <span key={i} style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{h}</span>
-          ))}
-        </div>
-
         {expenses.length === 0 ? (
           <EmptyState onAdd={onAdd} />
         ) : (
@@ -479,11 +476,13 @@ function ExpenseList({ expenses, allExpenses, filterCat, setFilterCat, onEdit, o
 // ─── Expense Row ──────────────────────────────────────────────────────────────
 function ExpenseRow({ expense: e, onEdit, onDelete, isDeleting, compact }) {
   const cat = getCat(e.category)
+
+  // Compact version used in dashboard recent list
   if (compact) {
     return (
       <div className="expense-row" style={{
         display: 'flex', alignItems: 'center', gap: 12, padding: '10px 12px',
-        borderRadius: 10, transition: 'background 0.15s', cursor: 'default',
+        borderRadius: 10, transition: 'background 0.15s',
       }}>
         <div style={{ width: 36, height: 36, borderRadius: 10, background: `${cat.color}18`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, flexShrink: 0 }}>
           {cat.emoji}
@@ -497,28 +496,39 @@ function ExpenseRow({ expense: e, onEdit, onDelete, isDeleting, compact }) {
     )
   }
 
+  // Card-style row for Expenses tab — works on all screen sizes
   return (
     <div className="expense-row" style={{
-      display: 'grid', gridTemplateColumns: '1fr 120px 140px 100px 80px',
-      gap: 12, padding: '14px 20px', borderBottom: '1px solid var(--border)',
-      transition: 'background 0.15s', alignItems: 'center',
+      display: 'flex', alignItems: 'center', gap: 12,
+      padding: '14px 16px', borderBottom: '1px solid var(--border)',
+      transition: 'background 0.15s',
     }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
-        <span style={{ fontSize: 18 }}>{cat.emoji}</span>
-        <span style={{ fontSize: 14, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{e.description}</span>
+      {/* Emoji icon */}
+      <div style={{ width: 38, height: 38, borderRadius: 10, background: `${cat.color}18`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 17, flexShrink: 0 }}>
+        {cat.emoji}
       </div>
-      <span style={{
-        fontSize: 12, fontWeight: 500, padding: '4px 10px', borderRadius: 20, display: 'inline-block',
-        background: `${cat.color}18`, color: cat.color,
-      }}>{e.category}</span>
-      <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>{fmtDate(e.date)}</span>
-      <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-primary)' }}>{fmt(e.amount)}</span>
-      <div style={{ display: 'flex', gap: 4 }}>
-        <button onClick={onEdit} style={iconBtn('#6366f1')}>
-          <Edit2 size={14} />
+
+      {/* Main info */}
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontSize: 14, fontWeight: 500, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+          {e.description}
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 3, flexWrap: 'wrap' }}>
+          <span style={{ fontSize: 11, fontWeight: 500, padding: '2px 8px', borderRadius: 20, background: `${cat.color}18`, color: cat.color }}>
+            {e.category}
+          </span>
+          <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{fmtDate(e.date)}</span>
+        </div>
+      </div>
+
+      {/* Amount + actions */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+        <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-primary)' }}>{fmt(e.amount)}</span>
+        <button onClick={onEdit} style={iconBtn('#6366f1')} title="Edit">
+          <Edit2 size={13} />
         </button>
-        <button onClick={onDelete} disabled={isDeleting} style={iconBtn('#f87171')}>
-          {isDeleting ? <Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} /> : <Trash2 size={14} />}
+        <button onClick={onDelete} disabled={isDeleting} style={iconBtn('#f87171')} title="Delete">
+          {isDeleting ? <Loader2 size={13} style={{ animation: 'spin 1s linear infinite' }} /> : <Trash2 size={13} />}
         </button>
       </div>
     </div>
