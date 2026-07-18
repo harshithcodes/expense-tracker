@@ -122,12 +122,46 @@ function AuthScreen() {
 }
 
 // ── Expense Modal ─────────────────────────────────────────────────────────────
+const VALID_CATS = ['Food & Dining','Transport','Entertainment','Utilities','Shopping','Health','Other']
+
+async function aiCategorize(description) {
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-6',
+        max_tokens: 20,
+        messages: [{ role: 'user', content: `Expense description: "${description}". Pick the best category from: Food & Dining, Transport, Entertainment, Utilities, Shopping, Health, Other. Reply with ONLY the category name.` }]
+      })
+    })
+    const data = await res.json()
+    const suggested = data?.content?.[0]?.text?.trim()
+    return VALID_CATS.find(c => c.toLowerCase() === suggested?.toLowerCase()) || null
+  } catch { return null }
+}
+
 function Modal({ onClose, onSave, editing }) {
   const [form, setForm] = useState(editing
     ? { amount: editing.amount, description: editing.description, category: editing.category, date: editing.date }
     : { amount: '', description: '', category: 'Food & Dining', date: new Date().toISOString().split('T')[0] })
   const [saving, setSaving] = useState(false)
   const [err, setErr] = useState('')
+  const [aiState, setAiState] = useState('idle') // idle | thinking | done
+  const [userPicked, setUserPicked] = useState(!!editing)
+
+  useEffect(() => {
+    if (userPicked) return
+    if (!form.description || form.description.length < 3) { setAiState('idle'); return }
+    setAiState('thinking')
+    const timer = setTimeout(async () => {
+      const cat = await aiCategorize(form.description)
+      if (cat) { setForm(f => ({ ...f, category: cat })); setAiState('done') }
+      else setAiState('idle')
+    }, 650)
+    return () => clearTimeout(timer)
+  }, [form.description, userPicked])
+
   const upd = (k, v) => setForm(f => ({ ...f, [k]: v }))
   const save = async () => {
     if (!form.amount || !form.description || !form.date) { setErr('Please fill all fields.'); return }
@@ -136,6 +170,11 @@ function Modal({ onClose, onSave, editing }) {
     await onSave({ ...form, amount: parseFloat(form.amount) })
     setSaving(false)
   }
+
+  const catLabel = aiState === 'thinking' ? 'Category — detecting...'
+    : (aiState === 'done' && !userPicked) ? 'Category — ✦ AI suggested'
+    : 'Category'
+
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(6px)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', zIndex: 1000 }} onClick={e => e.target === e.currentTarget && onClose()}>
       <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '20px 20px 0 0', padding: '24px 20px 36px', width: '100%', maxWidth: 500 }}>
@@ -146,17 +185,46 @@ function Modal({ onClose, onSave, editing }) {
         </div>
         {err && <div style={{ background: 'rgba(248,113,113,0.1)', border: '1px solid rgba(248,113,113,0.3)', borderRadius: 8, padding: '10px 14px', marginBottom: 14, display: 'flex', gap: 8, alignItems: 'center', color: '#f87171', fontSize: 13 }}><AlertCircle size={15}/>{err}</div>}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-          <Field label="Amount (₹)"><input type="number" min="0" step="1" placeholder="0" value={form.amount} onChange={e => upd('amount', e.target.value)} style={IS}/></Field>
-          <Field label="Description"><input type="text" placeholder="What did you spend on?" value={form.description} onChange={e => upd('description', e.target.value)} style={IS}/></Field>
-          <Field label="Category">
+          <Field label="Amount (₹)">
+            <input type="number" min="0" step="1" placeholder="0" value={form.amount} onChange={e => upd('amount', e.target.value)} style={IS}/>
+          </Field>
+          <Field label="Description">
+            <input
+              type="text" placeholder="What did you spend on?"
+              value={form.description}
+              onChange={e => { upd('description', e.target.value); setUserPicked(false); setAiState('idle') }}
+              style={IS}
+            />
+          </Field>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', minHeight: 20 }}>
+              <label style={{ fontSize: 12, fontWeight: 500, color: aiState === 'done' && !userPicked ? 'var(--accent-light)' : 'var(--text-secondary)', transition: 'color 0.3s' }}>
+                {catLabel}
+              </label>
+              {aiState === 'thinking' && <Loader2 size={13} color="var(--accent)" style={{ animation: 'spin 1s linear infinite', flexShrink: 0 }}/>}
+              {aiState === 'done' && !userPicked && (
+                <span style={{ fontSize: 10, color: 'var(--accent-light)', background: 'var(--accent-glow)', padding: '2px 8px', borderRadius: 20, border: '1px solid var(--accent)', flexShrink: 0 }}>AI ✦</span>
+              )}
+            </div>
             <div style={{ position: 'relative' }}>
-              <select value={form.category} onChange={e => upd('category', e.target.value)} style={{ ...IS, appearance: 'none', paddingRight: 36 }}>
+              <select
+                value={form.category}
+                onChange={e => { upd('category', e.target.value); setUserPicked(true); setAiState('idle') }}
+                style={{
+                  ...IS, appearance: 'none', paddingRight: 36,
+                  borderColor: aiState === 'done' && !userPicked ? 'var(--accent)' : 'var(--border)',
+                  boxShadow: aiState === 'done' && !userPicked ? '0 0 0 3px var(--accent-glow)' : 'none',
+                  transition: 'border-color 0.3s, box-shadow 0.3s'
+                }}>
                 {CATS.map(c => <option key={c.label} value={c.label}>{c.emoji} {c.label}</option>)}
               </select>
               <ChevronDown size={16} style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }}/>
             </div>
+            {userPicked && <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>Manually selected — AI suggestion cleared</span>}
+          </div>
+          <Field label="Date">
+            <input type="date" value={form.date} onChange={e => upd('date', e.target.value)} style={{ ...IS, colorScheme: 'dark' }}/>
           </Field>
-          <Field label="Date"><input type="date" value={form.date} onChange={e => upd('date', e.target.value)} style={{ ...IS, colorScheme: 'dark' }}/></Field>
           <div style={{ display: 'flex', gap: 10, marginTop: 4 }}>
             <button onClick={onClose} style={{ flex: 0, background: 'var(--bg-input)', border: '1px solid var(--border)', borderRadius: 12, color: 'var(--text-secondary)', fontSize: 14, fontWeight: 500, padding: '13px 20px', cursor: 'pointer' }}>Cancel</button>
             <button onClick={save} disabled={saving} style={{ flex: 1, background: 'var(--accent)', border: 'none', borderRadius: 12, color: '#fff', fontSize: 15, fontWeight: 600, padding: '13px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, cursor: 'pointer' }}>
@@ -173,7 +241,6 @@ function Modal({ onClose, onSave, editing }) {
 function Field({ label, children }) {
   return <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}><label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)' }}>{label}</label>{children}</div>
 }
-
 function Tip({ active, payload }) {
   if (!active || !payload?.length) return null
   return <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 10, padding: '10px 14px', fontSize: 13 }}><div style={{ fontWeight: 600, color: payload[0].payload.color || 'var(--accent)' }}>{payload[0].name}</div><div style={{ color: 'var(--text-primary)', fontWeight: 700 }}>{fmt(payload[0].value)}</div></div>
