@@ -39,15 +39,19 @@ function AuthScreen() {
     if (password.length < 6) { setError('Password must be at least 6 characters.'); return }
     setLoading(true)
     if (mode === 'signup') {
-      const { error: e } = await supabase.auth.signUp({
+      const { data, error: e } = await supabase.auth.signUp({
         email, password,
         options: { data: { full_name: name || email.split('@')[0] } }
       })
-      if (e) setError(e.message)
-      else setSuccess('Account created! Check your email to confirm, then log in.')
+      if (e) { setError(e.message); setLoading(false); return }
+      // If email confirmation is disabled, session exists immediately and onAuthStateChange logs them in
+      // If confirmation is still enabled, session is null — show the email prompt
+      if (!data.session) {
+        setSuccess('Check your email and click the confirmation link to activate your account.')
+      }
     } else {
       const { error: e } = await supabase.auth.signInWithPassword({ email, password })
-      if (e) setError(e.message)
+      if (e) setError(e.message === 'Invalid login credentials' ? 'Incorrect email or password.' : e.message)
     }
     setLoading(false)
   }
