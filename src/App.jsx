@@ -126,20 +126,17 @@ const VALID_CATS = ['Food & Dining','Transport','Entertainment','Utilities','Sho
 
 async function aiCategorize(description) {
   try {
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
+    const res = await fetch('/api/categorize', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-6',
-        max_tokens: 20,
-        messages: [{ role: 'user', content: `Expense description: "${description}". Pick the best category from: Food & Dining, Transport, Entertainment, Utilities, Shopping, Health, Other. Reply with ONLY the category name.` }]
-      })
+      body: JSON.stringify({ description })
     })
+    if (!res.ok) return null
     const data = await res.json()
-    const suggested = data?.content?.[0]?.text?.trim()
-    return VALID_CATS.find(c => c.toLowerCase() === suggested?.toLowerCase()) || null
+    return VALID_CATS.find(c => c === data.category) || null
   } catch { return null }
 }
+
 
 function Modal({ onClose, onSave, editing }) {
   const [form, setForm] = useState(editing
